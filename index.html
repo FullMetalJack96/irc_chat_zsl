@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Chat</title>
+        <link rel="stylesheet" href="css/jquery.cssemoticons.css" type="text/css" />
+        <link rel="stylesheet" href="css/style.css" type="text/css" />
+        <link rel="stylesheet" href="css/materialize.min.css" type="text/css" />
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+        <script src="js/jquery.cssemoticons.js"></script>
+         <script src="js/materialize.min.js"></script>
+        
+
+        <script>
+            
+            var username;
+            
+           var colorTab = [0,1,2,3,4,5,6,7,8,9,"A","B","C","D","E","F"];
+                    function randomColor(){
+                        var colorString = "#";
+                        for(var i=0;i<6;i++){
+                            colorString += colorTab[Math.floor(Math.random()*16)];
+                        }
+                        return colorString;
+                    };
+                   var color = randomColor();
+                    
+            var last_id = 0;
+            function init(){
+                var h = window.innerHeight;
+                var form = $("#field").innerHeight()
+                $("#messages").css("height",h-form)
+            }
+            function poll() {
+                $.ajax({
+                    url: "php/getmsg.php?last=" + last_id,
+                    method: "get",
+                    success: function (data) {
+                            jsonValues = JSON.parse(data);
+                            for (var i = 0; i < jsonValues.length; i++) {
+                                if (!isNaN(parseInt(jsonValues[i][0]))) {
+                                    document.getElementById("messages").innerHTML += "&lt;@<span style='color:" + jsonValues[i][3] + ";'>" + jsonValues[i][1] + "</span>&gt; " + jsonValues[i][2] + "<br />";
+                                }
+                            }
+                            last_id = parseInt(jsonValues[jsonValues.length - 1][0]);
+                        $("#messages").scrollTop(9999999);
+                    },
+                    complete: poll});
+            }
+
+            function sendMessage() {
+                var message = document.getElementById("value").value;
+                var cmd = [];
+                if (message.slice(0, 1) == "/") {
+                    cmd = message.split(" ");
+                    switch (cmd[0]) {
+                        case "/help":
+                            alert("CHAT AUTOR- JACEK PACIOREK 2015")
+                            break;
+                        case "/nick":
+                            var usr = username;
+                            username = "";
+                            for(var i = 1; i < cmd.length; i++) {
+                                username += cmd[i] + (i == (cmd.length - 1) ? "" : " ");
+                            }
+                            $.ajax({
+                                url: "php/sendmsg.php",
+                                method: "post",
+                                success: function (data) {
+                                    last_id = parseInt(data);
+                                }
+                            });
+                            break;
+                        case "/quit":
+                            alert('ZAMYKAM');
+                            window.close();
+                            
+                            break;
+                        default:
+                            document.getElementById("messages").innerHTML += "Nieznane polecenie <br />"
+                    }
+                    return;
+                }
+                $.ajax({
+                    url: "php/sendmsg.php",
+                    method: "post",
+                    data: {nick: username, message: message, color: color},
+                    success: function (data) {
+                        last_id = parseInt(data);
+                    }
+                });
+            }
+
+
+            function getLast() {
+                $.ajax({
+                    url: "php/getlast.php",
+                    method: "post",
+                    success: function (data) {
+                        if (!isNaN(parseInt(data))) {
+                            last_id = data;
+                        }
+                    }
+                });
+            }
+            $(document).ready(function () {
+                username = prompt("Podaj nazwę użytkownika");
+                document.getElementById("send").addEventListener("click", sendMessage, false);
+                getLast();
+                setTimeout(function () {
+                    poll();
+                }, 1000);
+               //getElementById("messages").innerHtml = "<strong>Dostępne komendy:</strong> /color [wartość CSS] | /nick [dowolny nick]<br />"
+                setInterval(function () {
+                    $("#messages").emoticonize();
+                }, 1500);
+            });
+        </script>
+    </head>
+    <body onload="init()">
+        <div id="content">
+        <div class="container z-depth-2">
+            <div id="messages">
+                <h4 class="center-align">CHAT</h4><br />
+        </div>
+        <div id="field">
+            <input placeholder="Wyślij wiadomość" type="text" id="value" autofocus maxlength="200"/>
+            <button type="button" class="btn-flat" id="send">SEND</button>
+        </div>
+      </div>
+        </div>
+    </body>
+</html>
